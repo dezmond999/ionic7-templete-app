@@ -55,8 +55,13 @@ export class VideoeditorComponent {
   this.videoElement.nativeElement.currentTime = this.trimStart;
   }
   onMetadataLoaded() {
-    this.duration = this.videoElement.nativeElement.duration;
+    const video = this.videoElement.nativeElement;
+    this.duration = video.duration;
+    this.trimStart = 0;
     this.trimEnd = this.duration; // Изначально обрезка по всей длине
+    this.activeRange = { start: 0, end: this.duration };
+    this.isTrimmed = false;
+    console.log('Данные видео загружены, обрезка сброшена');
   }
 
   onTimeUpdate() {

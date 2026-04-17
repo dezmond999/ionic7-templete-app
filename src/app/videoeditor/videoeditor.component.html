@@ -13,7 +13,7 @@
   </ion-toolbar>
 </ion-header>
 <ion-card-content style="font-size: 20px; line-height: 1.5; color: #666;">
-    Это простой видеоредактор! Здесь Вы сможете обрезать видео, наложить на него фильтры и изменить качество.
+    Это простой видеоредактор! Здесь Вы сможете обрезать видео, наложить на него фильтры и изменить формат.
     Для начала достаточно нажать на кнопку "Добавить видео" справа сверху!
   </ion-card-content>
 <ion-content>
@@ -162,6 +162,16 @@
         <p *ngIf="isProcessing" style="color: #888; font-size: 12px; margin-top: 10px;">
           Пожалуйста, не закрывайте вкладку. Видео записывается в реальном времени...
         </p>
+      </div>
+      <!-- Оверлей загрузки (появляется только при записи) -->
+      <div class="processing-overlay" *ngIf="isProcessing">
+        <div class="loader-content">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <h2>Записываем ваше видео...</h2>
+          <p>Пожалуйста, не закрывайте страницу</p>
+          <!-- Можно добавить визуальный прогресс (примерный) -->
+          <ion-progress-bar type="indeterminate" color="primary"></ion-progress-bar>
+        </div>
       </div>
     </div>
   </div>
