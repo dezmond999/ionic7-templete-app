@@ -23,6 +23,8 @@
     <div class="player-frame">
       <video #videoPlayer
              [class]="selectedFilter"
+             [class.ratio-square]="selectedRatio === 'square'"
+             [class.ratio-portrait]="selectedRatio === 'portrait'"
              (timeupdate)="onTimeUpdate()" 
              (loadedmetadata)="onMetadataLoaded()"
              (ended)="isPlaying = false"
@@ -71,7 +73,7 @@
 
           <div class="tool-tile" (click)="activeMode = 'quality'">
             <ion-icon name="options-outline"></ion-icon>
-            <span>Качество</span>
+            <span>Формат</span>
           </div>
       </div>
 
@@ -104,6 +106,16 @@
           <span>Обрезка видео</span>
         </div>
 
+        <div class="trim-actions" style="padding: 10px;">
+          <ion-button expand="block" (click)="applyTrim()">
+            Применить обрезку
+          </ion-button>
+          
+          <ion-button expand="block" fill="clear" color="danger" *ngIf="isTrimmed" (click)="isTrimmed = false; onMetadataLoaded()">
+            Сбросить до оригинала
+          </ion-button>
+        </div>
+
         <div class="trim-controls">
           <!-- Двойной ползунок Ionic для выбора диапазона -->
           <ion-range dualKnobs="true" 
@@ -119,6 +131,38 @@
         </div>
       </div>
 
+      <!-- Панель "Качество" (теперь тут выбор формата) -->
+      <div class="quality-container" *ngIf="activeMode === 'quality'">
+        <div class="tool-header">
+          <ion-button fill="clear" size="small" (click)="activeMode = 'none'">
+            <ion-icon name="chevron-back-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <span>Настройка формата (Качество)</span>
+        </div>
+
+        <div class="quality-options" style="display: flex; justify-content: space-around; padding: 20px;">
+          <ion-button [fill]="selectedRatio === 'original' ? 'solid' : 'outline'" (click)="setRatio('original')">
+            Original
+          </ion-button>
+          <ion-button [fill]="selectedRatio === 'square' ? 'solid' : 'outline'" (click)="setRatio('square')">
+            1:1
+          </ion-button>
+          <ion-button [fill]="selectedRatio === 'portrait' ? 'solid' : 'outline'" (click)="setRatio('portrait')">
+            9:16
+          </ion-button>
+        </div>
+      </div>
+    
+      <div class="final-actions" *ngIf="videoSrc" style="padding: 20px; text-align: center;">
+        <ion-button expand="block" color="success" (click)="saveTrimmedVideo()" [disabled]="isProcessing">
+          <ion-icon name="download-outline" slot="start"></ion-icon>
+          {{ isProcessing ? 'Идет запись...' : 'Сохранить видео' }}
+        </ion-button>
+        
+        <p *ngIf="isProcessing" style="color: #888; font-size: 12px; margin-top: 10px;">
+          Пожалуйста, не закрывайте вкладку. Видео записывается в реальном времени...
+        </p>
+      </div>
     </div>
   </div>
 </ion-content>

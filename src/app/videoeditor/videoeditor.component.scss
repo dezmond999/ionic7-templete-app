@@ -3,7 +3,7 @@
 }
 
 .editor-canvas {
-  display: flex;
+  display: flex;;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -14,17 +14,36 @@
 // Та самая закругленная коробка с тенью
 .player-frame {
   position: relative;
-  width: 100%;
-  max-width: 1000px;
+  width: auto;
+  max-width: 800px;
+  margin: 0 auto;
   background: #000;
-  border-radius: 20px; // Закругление
-  overflow: hidden;    // Чтобы видео не вылезало за углы
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); // Тень (Shadow Box)
+  border-radius: 20px;
+  overflow: hidden; // чтобы не вылезало за углы
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s ease; 
 
   video {
     width: 100%;
+    height: auto; // Позволяем высоте меняться
     display: block;
-    transition: filter 0.3s ease;
+    transition: all 0.5s ease;
+
+    &.ratio-square {
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border: 3px solid #00f2ea;
+    }
+    
+    &.ratio-portrait {
+      aspect-ratio: 9 / 16;
+      object-fit: cover;
+      max-height: 60vh; // Ограничиваем высоту, чтобы видео не улетало вниз
+      border: 3px solid #ff0050; // Яркая розовая рамка для проверки (потом удалишь)
+    }
   }
 }
 

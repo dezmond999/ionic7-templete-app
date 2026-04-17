@@ -16,8 +16,13 @@ export class VideoeditorComponent {
   currentTime = 0;
   duration = 0;
   selectedFilter: string = ''; // Текущий фильтр
+  selectedRatio: string = 'original'; 
   trimStart: number = 0;
   trimEnd: number = 0;
+  // То, что мы официально "применили"
+  activeRange = { start: 0, end: 0 };
+  isTrimmed = false; // Флаг, что мы работаем с обрезанным фрагментом
+  isProcessing = false;
 
   filtersList = [
   { name: 'Оригинал', class: '' },
@@ -39,7 +44,9 @@ export class VideoeditorComponent {
       this.isPlaying = false;
     }
   }
-
+  setRatio(ratio: string) {
+    this.selectedRatio = ratio;
+  }
   onTrimChange(event: any) {
   this.trimStart = event.detail.value.lower;
   this.trimEnd = event.detail.value.upper;
@@ -53,14 +60,22 @@ export class VideoeditorComponent {
   }
 
   onTimeUpdate() {
-    this.currentTime = this.videoElement.nativeElement.currentTime;
+  const video = this.videoElement.nativeElement;
+  this.currentTime = video.currentTime;
+
+  // Если мы применили обрезку, не даем играть за ее пределы даже в режиме фильтров
+  if (this.isTrimmed && this.currentTime >= this.activeRange.end) {
+    video.pause();
+    this.isPlaying = false;
+    video.currentTime = this.activeRange.start;
   }
+}
 
   togglePlay() {
-    const video = this.videoElement.nativeElement;
+  const video = this.videoElement.nativeElement;
     video.paused ? video.play() : video.pause();
-    this.isPlaying = !video.paused;
-  }
+  this.isPlaying = !video.paused;
+}
 
   skip(seconds: number) {
     const video = this.videoElement.nativeElement;
@@ -71,12 +86,103 @@ export class VideoeditorComponent {
   }
 
   onSeek(event: any) {
-    this.videoElement.nativeElement.currentTime = event.detail.value;
+  const video = this.videoElement.nativeElement;
+  let targetTime = event.detail.value;
+
+  // Если обрезка применена, ограничиваем ползунок перемотки (seekbar)
+  if (this.isTrimmed) {
+    if (targetTime < this.activeRange.start) targetTime = this.activeRange.start;
+    if (targetTime > this.activeRange.end) targetTime = this.activeRange.end;
   }
+  
+  video.currentTime = targetTime;
+}
 
   formatTime(seconds: number) {
     const mins = Math.floor(seconds / 60) || 0;
     const secs = Math.floor(seconds % 60) || 0;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
+async saveTrimmedVideo() {
+  const video = this.videoElement.nativeElement;
+  this.isProcessing = true;
+
+  // 1. Определяем размеры холста согласно выбранному Ratio
+  let canvasWidth = video.videoWidth;
+  let canvasHeight = video.videoHeight;
+
+  if (this.selectedRatio === 'square') {
+    canvasWidth = canvasHeight = Math.min(video.videoWidth, video.videoHeight);
+  } else if (this.selectedRatio === 'portrait') {
+    canvasWidth = video.videoHeight * (9 / 16);
+    canvasHeight = video.videoHeight;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  const ctx = canvas.getContext('2d')!;
+
+  // 2. Настройка записи потока
+  const stream = canvas.captureStream(30); // 30 кадров в секунду
+  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  const chunks: Blob[] = [];
+
+  recorder.ondataavailable = (e) => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my_edited_video_${Date.now()}.webm`;
+    a.click();
+    this.isProcessing = false;
+    video.pause();
+  };
+
+  // 3. Подготовка видео к записи
+  // Начинаем с того момента, который мы "Применили" через applyTrim()
+  video.currentTime = this.activeRange.start;
+  video.muted = true; // Без звука для стабильности записи через Canvas
+  video.play();
+  recorder.start();
+
+  const drawFrame = () => {
+    // Останавливаемся ровно на конце примененной обрезки
+    if (video.paused || video.ended || video.currentTime >= this.activeRange.end) {
+      recorder.stop();
+      return;
+    }
+    
+    // ПРИМЕНЯЕМ ФИЛЬТРЫ (берем текущий filter из CSS видео)
+    ctx.filter = getComputedStyle(video).filter;
+    
+    // Расчет центрирования (аналог object-fit: cover)
+    const scale = Math.max(canvasWidth / video.videoWidth, canvasHeight / video.videoHeight);
+    const x = (canvasWidth - video.videoWidth * scale) / 2;
+    const y = (canvasHeight - video.videoHeight * scale) / 2;
+    
+    ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale);
+    
+    requestAnimationFrame(drawFrame);
+  };
+
+  drawFrame();
+}
+
+//метод применить обрезку
+applyTrim() {
+  this.activeRange.start = this.trimStart;
+  this.activeRange.end = this.trimEnd;
+  this.isTrimmed = true;
+  
+  // Возвращаем видео в начало нового фрагмента
+  const video = this.videoElement.nativeElement;
+  video.currentTime = this.activeRange.start;
+  
+  // Выходим в главное меню
+  this.activeMode = 'none';
+  
+  console.log(`Фрагмент зафиксирован: ${this.activeRange.start} - ${this.activeRange.end}`);
+}
 }
