@@ -23,6 +23,7 @@ export class VideoeditorComponent {
   activeRange = { start: 0, end: 0 };
   isTrimmed = false; // Флаг, что мы работаем с обрезанным фрагментом
   isProcessing = false;
+  recordingProgress: number = 0;
 
   filtersList = [
   { name: 'Оригинал', class: '' },
@@ -99,15 +100,14 @@ export class VideoeditorComponent {
     if (targetTime < this.activeRange.start) targetTime = this.activeRange.start;
     if (targetTime > this.activeRange.end) targetTime = this.activeRange.end;
   }
-  
-  video.currentTime = targetTime;
-}
+  video.currentTime = targetTime;}
 
   formatTime(seconds: number) {
     const mins = Math.floor(seconds / 60) || 0;
     const secs = Math.floor(seconds % 60) || 0;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
+
 async saveTrimmedVideo() {
   const video = this.videoElement.nativeElement;
   this.isProcessing = true;
@@ -135,15 +135,23 @@ async saveTrimmedVideo() {
 
   recorder.ondataavailable = (e) => chunks.push(e.data);
   recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `my_edited_video_${Date.now()}.webm`;
-    a.click();
-    this.isProcessing = false;
-    video.pause();
-  };
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `my_edited_video_${Date.now()}.webm`;
+  a.click();
+
+  // СБРОС СОСТОЯНИЯ
+  this.isProcessing = false;          // Закрываем оверлей
+  this.recordingProgress = 0;         // Обнуляем прогресс
+  this.activeMode = 'none';           // Возвращаемся в главное меню инструментов
+  
+  video.pause();
+  video.currentTime = 0;              // Возвращаем видео к началу
+  this.currentTime = 0;               // Обновляем ползунок (seekbar)
+};
+
 
   // 3. Подготовка видео к записи
   // Начинаем с того момента, который мы "Применили" через applyTrim()
@@ -153,12 +161,16 @@ async saveTrimmedVideo() {
   recorder.start();
 
   const drawFrame = () => {
-    // Останавливаемся ровно на конце примененной обрезки
-    if (video.paused || video.ended || video.currentTime >= this.activeRange.end) {
-      recorder.stop();
-      return;
-    }
-    
+  if (video.paused || video.ended || video.currentTime >= this.activeRange.end) {
+    recorder.stop();
+    this.recordingProgress = 100; // Финализируем прогресс
+    return;
+  }
+
+  // РАСЧЕТ ПРОЦЕНТА
+  const totalToRecord = this.activeRange.end - this.activeRange.start;
+  const recordedSoFar = video.currentTime - this.activeRange.start;
+  this.recordingProgress = Math.round((recordedSoFar / totalToRecord) * 100);
     // ПРИМЕНЯЕМ ФИЛЬТРЫ (берем текущий filter из CSS видео)
     ctx.filter = getComputedStyle(video).filter;
     

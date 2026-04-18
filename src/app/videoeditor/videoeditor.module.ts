@@ -4,6 +4,7 @@ import {VideoeditorComponent} from './videoeditor.component'
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { VideoeditorRoutingModule } from "./videoeditor.routing.module";
+import { TranslateModule } from '@ngx-translate/core';
 
 
 
@@ -13,7 +14,8 @@ import { VideoeditorRoutingModule } from "./videoeditor.routing.module";
     CommonModule,
     FormsModule,
     IonicModule,    
-    VideoeditorRoutingModule
+    VideoeditorRoutingModule,
+    TranslateModule
   ]
 })
 export class VideoeditorModule { }
